@@ -1,0 +1,16 @@
+certifi
+charset-normalizer
+dill
+idna
+numpy
+psycopg2-binary
+python-decouple
+python-dotenv
+requests
+tqdm
+urllib3
+uuid6
+schedule
+pandas
+python-dotenv
+pymongo
