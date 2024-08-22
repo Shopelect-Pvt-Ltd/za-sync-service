@@ -56,7 +56,7 @@ def main(zoho_table_name, view_id, retry_attempts=0):
         file_path = f"./{zoho_table_name}.csv"
         logging.info("File Path: "+str(file_path))
         # # Get job details
-        sql_query = f"select * from `{zoho_table_name}` limit 10 """
+        sql_query = f"select * from `{zoho_table_name}` """
         logging.info("Import Query: "+str(sql_query))
         state = zoho_get_sql(bulk, sql_query, file_path)
         if state:
