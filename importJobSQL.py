@@ -92,6 +92,9 @@ def main(details):
         logging.info(create_table_query)
         logging.info(insert_query)
 
+        drop_table_query=f"DROP TABLE IF EXISTS public.{pg_table_name}"
+        cur.execute(drop_table_query)
+
         cur.execute(create_table_query)
 
         for index, row in df.iterrows():
@@ -104,7 +107,7 @@ def main(details):
         cur.close()
         conn.close()
         logging.info("Imported data successfully")
-        return True, "PASS"
+        return "PASS", "PASS"
     except Exception as e:
         logging.info("Exception occurred while importJobSQL: " + str(e))
-        return False, str(e)
+        return "FAILED", str(e)

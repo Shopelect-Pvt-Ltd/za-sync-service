@@ -7,8 +7,15 @@ load_dotenv()
 import time
 from pymongo import MongoClient
 import logging
+import requests
+from datetime import datetime
+import pytz
+from sendgrid.helpers.mail import Mail
+import sys
 
 MONGO_URL = os.getenv('MONGO_URL')
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+
 # Setup basic configuration for logging
 logging.basicConfig(
     level=logging.INFO,
@@ -19,13 +26,61 @@ logging.info("Mongo connection successful")
 
 def getSyncJob(column_mapping_collection):
     logging.info("getSyncJob called...")
-    column_mapping_data = list(column_mapping_collection.find())
+    if len(sys.argv) >= 2 and sys.argv[1] == "PENDING":
+        column_mapping_data = list(column_mapping_collection.find({"status": "PENDING"}))
+    else:
+        column_mapping_data = list(column_mapping_collection.find({"status": "PASS"}))
     return column_mapping_data
+
+def send_email(to_emails, template_id, dynamic_template_data):
+    api_key = SENDGRID_API_KEY
+    url = 'https://api.sendgrid.com/v3/mail/send'
+
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}',
+    }
+
+    for to_email in to_emails:
+        message = Mail(
+            from_email='alerts@finkraft.ai',
+            to_emails=to_email,
+        )
+        message.template_id = template_id
+        message.dynamic_template_data = dynamic_template_data
+
+        try:
+            # Convert the Mail object to JSON
+            response = requests.post(
+                url,
+                headers=headers,
+                json=message.get(),
+                verify=False  # Disable SSL verification
+            )
+            logging.info(f"Email sent to {to_email} successfully! Status code: {response.status_code}")
+        except Exception as e:
+            logging.info(f"Error sending email to {to_email}: {e}")
+
 
 def updateState(column_mapping_collection, data, status, message):
     logging.info("updateState called...")
     logging.info("Status: " + str(status))
     logging.info("Message: " + str(message))
+    if status != "PASS":
+        za_table_name = data["za_table_name"]
+        pg_table_name = data["pg_table_name"]
+        to_emails = ["komalkant@kgrp.in", "ranjith@kgrp.in","tabrez@kgrp.in"]
+        template_id = "d-1331584f7ed54169b5c36894ec9c19cc"
+        ist = pytz.timezone('Asia/Kolkata')
+        current_time_ist = datetime.now(ist)
+        dynamic_template_data = {
+            "subject": "Exception happened while syncing za-data " + str(
+                current_time_ist.strftime('%d-%m-%Y %H:%M:%S')),
+            "description": "Exception happened while syncing za table: " + str(za_table_name) + " to pg table: " + str(
+                pg_table_name) + ". Message: " + str(message)
+        }
+        send_email(to_emails, template_id, dynamic_template_data)
+
     key_to_check = {"_id": data["_id"]}
     result = column_mapping_collection.update_one(
         key_to_check,
@@ -33,7 +88,7 @@ def updateState(column_mapping_collection, data, status, message):
             "$set": {
                 "status": status,
                 "message": message,
-                "updatedAt":(int(time.time())*1000)
+                "updatedAt": (int(time.time()) * 1000)
             }
         })
     if result.matched_count > 0:
@@ -52,13 +107,13 @@ def main(retry_attempts=0):
         logging.info("No. of Jobs: " + str(len(jobs)))
         if jobs is not None and len(jobs) != 0:
             for i in range(len(jobs)):
-                logging.info("Job: "+str(jobs[i]))
+                logging.info("Job: " + str(jobs[i]))
                 zoho_table_name = jobs[i]["za_table_name"]
                 view_id = jobs[i]["zohoViewId"]
                 logging.info("============================================ Started Exporting from ZA "
                              "============================================")
                 export_status, export_message = job_export(zoho_table_name, view_id, 0)
-                if export_status:
+                if export_status == "PASS":
                     logging.info("============================================ Started Importing into PG "
                                  "============================================")
                     import_status, import_message = job_import(jobs[i])

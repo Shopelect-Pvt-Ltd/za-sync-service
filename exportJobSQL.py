@@ -60,10 +60,10 @@ def main(zoho_table_name, view_id, retry_attempts=0):
         logging.info("Import Query: "+str(sql_query))
         state = zoho_get_sql(bulk, sql_query, file_path)
         if state:
-            return True, "PASS"
+            return "PASS", "PASS"
     except Exception as e:
         logging.info("Exception happened in the exportJobSQL: " + str(e))
         if retry_attempts > 4:
-            return False, str(e)
+            return "FAILED", str(e)
         main(zoho_table_name, view_id, retry_attempts + 1)
 
