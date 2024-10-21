@@ -68,71 +68,7 @@ def delete_collection_in_mongo(output_database,op_collection):
 def export_json_to_mongo(output_database,op_collection):
     client = MongoInit()
     vendor_master_db = client[output_database]
-
-    # vendor_master_db.create_collection(op_collection,
-    #                                 validator={
-    #                                     "$jsonSchema": {
-    #                                         "bsonType": "object",
-    #                                         "additionalProperties": {
-    #                                             "bsonType": [
-    #                                                 "double",
-    #                                                 "string",
-    #                                                 "object",
-    #                                                 "array",
-    #                                                 "binData",
-    #                                                 "undefined",
-    #                                                 "objectId",
-    #                                                 "bool",
-    #                                                 "date",
-    #                                                 "null",
-    #                                                 "regex",
-    #                                                 "dbPointer",
-    #                                                 "javascript",
-    #                                                 "symbol",
-    #                                                 "int",
-    #                                                 "timestamp",
-    #                                                 "long",
-    #                                                 "decimal",
-    #                                                 "minKey",
-    #                                                 "maxKey"
-    #                                             ] # Allow specific types or null for all fields
-    #                                         }
-    #                                     }
-    #                                 },
-    #                                 validationLevel="strict",
-    #                                 validationAction='error'
-    #                                 )
-
-
-    vendor_master_db.create_collection(op_collection,
-                                    # validator={
-                                    #     "$jsonSchema": {
-                                    #         "bsonType": "object",
-                                    #     "properties": {
-                                    #         "BuyerDtls": {
-                                    #             "bsonType": "object",
-                                    #             "required": ["Gstin"],  # This makes the GSTIN field mandatory
-                                    #             "properties": {
-                                    #                 "Gstin": {
-                                    #                     "bsonType": ["string", "null"]  # Allows string or null
-                                    #                 }
-                                    #             }
-                                    #         },
-                                    #         "DocDtls": {
-                                    #             "bsonType": "object",
-                                    #             "properties": {
-                                    #                 "Dt": {"bsonType": ["string", "null"]},
-                                    #                 "No": {"bsonType": ["string", "null"]}
-                                    #             }
-                                    #         }
-                                    #     },
-                                    #     "required":["BuyerDtls","BuyerDtls.GSTIN","DocDtls","DocDtls.Dt","DocDtls.No"],
-                                    #         "additionalProperties": True
-                                    #     }
-                                    # },
-                                    # validationLevel="strict",
-                                    # validationAction='error'
-                                    )
+    vendor_master_db.create_collection(op_collection)
 
 
     logging.info("Collection created successfully {op_collection}")
@@ -144,10 +80,6 @@ def export_json_to_mongo(output_database,op_collection):
 
     # Function to insert a document into MongoDB
     def insert_document(data):
-        # if data.get("_id"):
-        #     data["_id"] = ObjectId(data['_id']) if isinstance(data['_id'], str) and ObjectId.is_valid(data['_id']) else data['_id']
-        # if data.get("hotel_id"):
-        #     data["hotel_id"] = ObjectId(data['hotel_id']) if isinstance(data['hotel_id'], str) and ObjectId.is_valid(data['hotel_id']) else data['hotel_id']
         try:
             output_collection.insert_one(data)
         except Exception as e:
@@ -183,8 +115,25 @@ def export_json_to_mongo(output_database,op_collection):
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
             executor.map(process_batch, chunks)
 
-    # os.remove(file_path)
+    os.remove(file_path)
     logging.info("BIBIDEBA")
     logging.info("Data imported successfully.")
 
-        
+
+def rename_collection(output_database_name, source_collection_name, target_collection_name):
+    client = MongoInit()
+    op_db_cursor = client[output_database_name]
+    op_coll_cursor = op_db_cursor[source_collection_name]
+
+    op_coll_cursor.rename(target_collection_name,dropTarget=True)
+
+    logging.info("Renamed Collection Successfully")
+
+
+
+def export_to_mongo(df_final,output_database_name,output_collection_name):
+        export_dataframe_to_json(df_final)
+
+        export_json_to_mongo(output_database_name,f"{output_collection_name}_temp")
+        rename_collection(output_database_name,f"{output_collection_name}_temp",output_collection_name)
+        logging.info("Imported data successfully")

@@ -12,7 +12,7 @@ from pyspark.sql.functions import col,when, struct
 
 from pyspark.sql.types import StringType,DoubleType,IntegerType
 
-from output_script import export_json_to_mongo,export_dataframe_to_json, delete_collection_in_mongo
+from output_script import export_to_mongo
 
 from config import (
     MongoInit,
@@ -23,7 +23,7 @@ from config import (
 
 load_dotenv()
 
-op_database = os.getenv('MONGO_DATABASE')
+op_database_name = os.getenv('MONGO_DATABASE')
 
 # Setup basic configuration for logging
 logging.basicConfig(
@@ -31,15 +31,12 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(lineno)d - %(message)s'
 )
 
-
-
-
 def main(details):
     try:
         logging.info("Started importing...")
         # Connect to MongoDB
         client = MongoInit()
-        za_mongo_sync = client[op_database]
+        za_mongo_sync = client[op_database_name]
 
         #Connect to Pyspark
         spark = SparkInit()
@@ -103,21 +100,8 @@ def main(details):
         logging.info(" Printing df schema")
         df.printSchema()
 
-        # ---------------- Handling Null Values --------------------------------
-
-        col_name_list = df.columns
-
-        df = df.withColumn(col_name,when(col(col_name).isNotNull(),col(col_name)).otherwise(None))
-
-        export_dataframe_to_json(df)
-        output_collection = details["mongo_collection_name"]
-
-        delete_collection_in_mongo(op_database,output_collection)
-
-        export_json_to_mongo(op_database,output_collection)
-
-        logging.info("Imported data successfully")
-        # os.remove(file_path)
+        export_to_mongo(df,op_database_name,details["mongo_collection_name"])
+        os.remove(file_path)
         return "PASS", "PASS"
     except Exception as e:
         logging.info("Exception occurred while importJobSQL: " + str(e))
