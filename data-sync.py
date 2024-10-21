@@ -69,7 +69,7 @@ def updateState(column_mapping_collection, data, status, message):
     if status != "PASS":
         za_table_name = data["za_table_name"]
         mongo_collection_name = data["mongo_collection_name"]
-        to_emails = ["komalkant@kgrp.in", "sarvesh@kgrp.in"]
+        to_emails = ["sarvesh@kgrp.in"]
         template_id = "d-1331584f7ed54169b5c36894ec9c19cc"
         ist = pytz.timezone('Asia/Kolkata')
         current_time_ist = datetime.now(ist)

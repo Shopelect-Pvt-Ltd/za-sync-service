@@ -57,6 +57,8 @@ def main(details):
 
         df = spark.read.option("header",True).csv(file_path)
 
+        df = df.fillna("")
+
         # ------------- Handling Type Casting -------------
 
         datatypemap = {
@@ -101,6 +103,12 @@ def main(details):
         logging.info(" Printing df schema")
         df.printSchema()
 
+        # ---------------- Handling Null Values --------------------------------
+
+        col_name_list = df.columns
+
+        df = df.withColumn(col_name,when(col(col_name).isNotNull(),col(col_name)).otherwise(None))
+
         export_dataframe_to_json(df)
         output_collection = details["mongo_collection_name"]
 
@@ -108,54 +116,8 @@ def main(details):
 
         export_json_to_mongo(op_database,output_collection)
 
-        # mongo_collection_name = details["mongo_collection_name"]
-        # column_data = details["column_mapping"]
-        # for i in range(len(column_data)):
-        #     if (column_data[i]["data_type"] == "DOUBLE" or column_data[i]["data_type"] == "BIGINT" ):
-        #         numeric_columns.append(column_data[i]["source_key"])
-        #     if column_data[i]["data_type"] in datatypemap:
-        #         create_table_query += ' "' + column_data[i]["destination_key"] + '" ' + datatypemap[
-        #             column_data[i]["data_type"]]
-        #     else:
-        #         create_table_query += ' "' + column_data[i]["destination_key"] + '" ' + "TEXT"
-
-        #     insert_query_param += ' "' + column_data[i]["destination_key"] + '" '
-        #     insert_values_param += ' %s'
-        #     if i < len(column_data) - 1:
-        #         create_table_query += ","
-        #         insert_query_param += ","
-        #         insert_values_param += ","
-
-        # create_table_query += " )"
-        # insert_query_param += " )"
-        # insert_values_param += " ) ON CONFLICT (id) DO NOTHING;"
-
-        # insert_query = insert_query_param + insert_values_param
-
-        # for col in numeric_columns:
-        #     df[col] = df[col].apply(lambda x: str(x).replace(',', '') if pd.notnull(x) else x).astype(float)
-
-        # df = df.replace({np.nan: None})
-        # df = df.where(pd.notnull(df), None)
-
-        # logging.info(create_table_query)
-        # logging.info(insert_query)
-
-        # drop_table_query=f"DROP TABLE IF EXISTS public.{pg_table_name}"
-        # cur.execute(drop_table_query)
-
-        # cur.execute(create_table_query)
-
-        # for index, row in df.iterrows():
-        #     data_to_insert = [row["id"]]
-        #     for i in range(len(column_data)):
-        #         data_to_insert += [row[column_data[i]["source_key"]]]
-        #     cur.execute(insert_query, tuple(data_to_insert))
-        # conn.commit()
-        # # Close the connection
-        # cur.close()
-        # conn.close()
         logging.info("Imported data successfully")
+        # os.remove(file_path)
         return "PASS", "PASS"
     except Exception as e:
         logging.info("Exception occurred while importJobSQL: " + str(e))
