@@ -1,5 +1,5 @@
-from exportJobSQL import main as job_export
-from importJobSQL import main as job_import
+from exportJobZoho import main as job_export
+from importJobMongo import main as job_import
 import os
 from dotenv import load_dotenv
 
@@ -68,16 +68,16 @@ def updateState(column_mapping_collection, data, status, message):
     logging.info("Message: " + str(message))
     if status != "PASS":
         za_table_name = data["za_table_name"]
-        pg_table_name = data["pg_table_name"]
-        to_emails = ["komalkant@kgrp.in", "ranjith@kgrp.in","tabrez@kgrp.in"]
+        mongo_collection_name = data["mongo_collection_name"]
+        to_emails = ["komalkant@kgrp.in", "sarvesh@kgrp.in"]
         template_id = "d-1331584f7ed54169b5c36894ec9c19cc"
         ist = pytz.timezone('Asia/Kolkata')
         current_time_ist = datetime.now(ist)
         dynamic_template_data = {
             "subject": "Exception happened while syncing za-data " + str(
                 current_time_ist.strftime('%d-%m-%Y %H:%M:%S')),
-            "description": "Exception happened while syncing za table: " + str(za_table_name) + " to pg table: " + str(
-                pg_table_name) + ". Message: " + str(message)
+            "description": "Exception happened while syncing za table: " + str(za_table_name) + " to mongo collection: " + str(
+                mongo_collection_name) + ". Message: " + str(message)
         }
         send_email(to_emails, template_id, dynamic_template_data)
 
@@ -98,7 +98,7 @@ def updateState(column_mapping_collection, data, status, message):
 
 def main(retry_attempts=0):
     try:
-        db = client['gstservice']
+        db = client['za_mongo_sync']
         column_mapping_collection = db['column_mapping_schema']
         logging.info("Retry Attempts: " + str(retry_attempts))
         start_time = time.time()
@@ -114,7 +114,7 @@ def main(retry_attempts=0):
                              "============================================")
                 export_status, export_message = job_export(zoho_table_name, view_id, 0)
                 if export_status == "PASS":
-                    logging.info("============================================ Started Importing into PG "
+                    logging.info("============================================ Started Importing into MONGO "
                                  "============================================")
                     import_status, import_message = job_import(jobs[i])
                     updateState(column_mapping_collection, jobs[i], import_status, import_message)
