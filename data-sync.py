@@ -61,12 +61,11 @@ def send_email(to_emails, template_id, dynamic_template_data):
         except Exception as e:
             logging.info(f"Error sending email to {to_email}: {e}")
 
-
 def updateState(column_mapping_collection, data, status, message):
     logging.info("updateState called...")
     logging.info("Status: " + str(status))
     logging.info("Message: " + str(message))
-    if status != "PASS":
+    if status != "STAGE1":
         za_table_name = data["za_table_name"]
         mongo_collection_name = data["mongo_collection_name"]
         to_emails = ["sarvesh@kgrp.in"]

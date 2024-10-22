@@ -102,7 +102,7 @@ def main(details):
 
         export_to_mongo(df,op_database_name,details["mongo_collection_name"])
         os.remove(file_path)
-        return "PASS", "PASS"
+        return "STAGE1", "STAGE1"
     except Exception as e:
         logging.info("Exception occurred while importJobSQL: " + str(e))
         return "FAILED", str(e)
